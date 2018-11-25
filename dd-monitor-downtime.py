@@ -16,6 +16,11 @@ def _abort(message, status=1):
     sys.exit(status)
 
 
+def _success(message):
+    print(message)
+    sys.exit(0)
+
+
 def _read_state(file):
     if not os.path.exists(file):
         _abort("File {} does not exist".format(file), status=3)
@@ -59,6 +64,16 @@ def schedule(ctx, md_name):
 @click.pass_context
 def cancel(ctx, md_name):
     state = _read_state(ctx.obj["statefile"])
+    if md_name not in state:
+        _abort("Monitor downtime name {} does not exist".format(md_name), status=5)
+
+    try:
+        md_id = int(state[md_name])
+        datadog.api.Downtime.delete(md_id)
+    except Exception as e:
+        _abort("Failed to cancel Monitor downtime {}: {}".format(md_name, str(e)), status=6)
+
+    _success("Cancelled Monitor downtime {} (ID {}) successfully".format(md_name, md_id))
 
 
 if __name__ == "__main__":
