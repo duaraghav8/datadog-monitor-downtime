@@ -9,6 +9,7 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "-help", "--help"])
 DEFAULT_STATE_FILENAME = ".mdstate.json"
 ENV_DD_API_KEY = "DATADOG_API_KEY"
 ENV_DD_APP_KEY = "DATADOG_APP_KEY"
+STATE_LOCK_FILENAME = ".ddmd.lock"
 
 
 def _abort(message, status=1):
@@ -19,6 +20,27 @@ def _abort(message, status=1):
 def _success(message):
     print(message)
     sys.exit(0)
+
+
+def _acquire_state_lock(target_dir):
+    state_lock_file = os.path.join(target_dir, STATE_LOCK_FILENAME)
+
+    # Wait for the other process to release state lock
+    while os.path.exists(state_lock_file):
+        pass
+
+    try:
+        open(state_lock_file, "w").close()
+    except Exception as e:
+        _abort("Failed to acquire state lock {}: {}".format(state_lock_file, str(e)), status=11)
+
+
+def _release_state_lock(target_dir):
+    state_lock_file = os.path.join(target_dir, STATE_LOCK_FILENAME)
+    try:
+        os.remove(os.path.join(state_lock_file))
+    except Exception as e:
+        _abort("Failed to delete state lock {}: {}".format(state_lock_file, str(e)), status=10)
 
 
 def _read_state(file):
