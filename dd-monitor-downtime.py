@@ -32,6 +32,32 @@ def _read_state(file):
             _abort(str(ve), status=4)
 
 
+def _write_state(file, action, key, value):
+    # acquire state lock, read state, modify in memory, write back, release lock
+    state_dir = os.path.dirname(file)
+
+    _acquire_state_lock(state_dir)
+    state = _read_state(file)
+
+    if action == "delete" and key in state:
+        # Ignore if key does not exist in state
+        del state[key]
+    elif action == "create":
+        if key in state:
+            _release_state_lock(state_dir)
+            _abort("Key {} already exists in state file".format(key), status=8)
+        state[key] = value
+
+    with open(file, "w") as statefile:
+        try:
+            statefile.write(json.dumps(state, indent=4))
+        except Exception as e:
+            _release_state_lock(state_dir)
+            _abort("Failed to write to state file: {}".format(str(e)), status=9)
+
+    _release_state_lock(state_dir)
+
+
 @click.group(context_settings=CONTEXT_SETTINGS)
 @click.option("-state", default=DEFAULT_STATE_FILENAME, help="Path of the state file", show_default=True)
 @click.option("-dd-api-key", default=os.environ.get(ENV_DD_API_KEY, ""), help="Datadog API Key")
@@ -72,6 +98,14 @@ def cancel(ctx, md_name):
         datadog.api.Downtime.delete(md_id)
     except Exception as e:
         _abort("Failed to cancel Monitor downtime {}: {}".format(md_name, str(e)), status=6)
+
+    try:
+        _write_state(file=ctx.obj["statefile"], action="delete", key=md_name)
+    except Exception as e:
+        _abort(
+            "Successfully cancelled Monitor downtime {} (ID {}) but failed to update local state: {}".format(md_name, md_id, str(e)),
+            status=7
+        )
 
     _success("Cancelled Monitor downtime {} (ID {}) successfully".format(md_name, md_id))
 
