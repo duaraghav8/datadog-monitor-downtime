@@ -7,7 +7,9 @@ import datadog
 
 VERSION = "0.1.0"
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "-help", "--help"])
-DEFAULT_STATE_FILENAME = os.path.join(os.getcwd(), ".mdstate.json")
+DEFAULT_STATE_FILENAME = ".mdstate.json"
+CWD = os.getcwd()
+DEFAULT_STATE_FILE = os.path.join(CWD, DEFAULT_STATE_FILENAME)
 ENV_DD_API_KEY = "DATADOG_API_KEY"
 ENV_DD_APP_KEY = "DATADOG_APP_KEY"
 STATE_LOCK_FILENAME = ".ddmd.lock"
@@ -96,7 +98,7 @@ def _write_state(file, action, key, value):
 
 
 @click.group(context_settings=CONTEXT_SETTINGS)
-@click.option("-state", default=DEFAULT_STATE_FILENAME, help="Path of the state file", show_default=True)
+@click.option("-state", default=DEFAULT_STATE_FILE, help="Path of the state file", show_default=True)
 @click.option("-dd-api-key", default=os.getenv(ENV_DD_API_KEY, ""),
               help="Datadog API Key (env: {})".format(ENV_DD_API_KEY))
 @click.option("-dd-app-key", default=os.getenv(ENV_DD_APP_KEY, ""),
@@ -111,6 +113,32 @@ def managercli(ctx, state, dd_api_key, dd_app_key):
         "dd_api_key": dd_api_key,
         "dd_app_key": dd_app_key
     }
+
+
+@managercli.command(short_help="Initialize state")
+@click.option("-statefile", default=DEFAULT_STATE_FILE, show_default=True, help="Path of the state file")
+def init(statefile):
+    """
+    Initialize state
+
+    This command must be run before using other functionality of
+    the application. If the state file is lost or corrupted, the
+    application cannot track the downtimes created by it.
+
+    It is recommended that the state file be periodically backed up
+    and only this application should write to it.
+
+    By default, this command creates an empty state file in
+    the process's current working directory.
+    """
+    try:
+        sf = open(statefile, "w")
+        sf.write(json.dumps({}, indent=4))
+        sf.close()
+    except Exception as e:
+        _abort("Failed to initialize state at {}: {}".format(statefile, str(e)), status=14)
+
+    _success(statefile)
 
 
 @managercli.command(short_help="Get version")
