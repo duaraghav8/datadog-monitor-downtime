@@ -3,6 +3,7 @@ import sys
 import json
 import click
 import datadog
+import logging
 
 
 VERSION = "0.1.0"
@@ -14,14 +15,20 @@ ENV_DD_API_KEY = "DATADOG_API_KEY"
 ENV_DD_APP_KEY = "DATADOG_APP_KEY"
 STATE_LOCK_FILENAME = ".ddmd.lock"
 
+logging.basicConfig(
+    level=logging.INFO,
+    datefmt="%Y-%m-%d %H:%M:%S",
+    format='%(asctime)s [%(levelname)s]  %(message)s'
+)
+
 
 def _abort(message, status=1):
-    print(message)
+    logging.error(message)
     sys.exit(status)
 
 
 def _success(message):
-    print(message)
+    logging.info(message)
     sys.exit(0)
 
 
@@ -138,7 +145,7 @@ def init(statefile):
     except Exception as e:
         _abort("Failed to initialize state at {}: {}".format(statefile, str(e)), status=14)
 
-    _success(statefile)
+    _success("Created {}".format(statefile))
 
 
 @managercli.command(short_help="Get version")
