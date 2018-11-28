@@ -15,11 +15,8 @@ ENV_DD_API_KEY = "DATADOG_API_KEY"
 ENV_DD_APP_KEY = "DATADOG_APP_KEY"
 STATE_LOCK_FILENAME = ".ddmd.lock"
 
-logging.basicConfig(
-    level=logging.INFO,
-    datefmt="%Y-%m-%d %H:%M:%S",
-    format='%(asctime)s [%(levelname)s]  %(message)s'
-)
+logging.basicConfig(level=logging.INFO,
+                    datefmt="%Y-%m-%d %H:%M:%S%z", format='%(asctime)s [%(levelname)s]  %(message)s')
 
 
 def _abort(message, status=1):
@@ -153,14 +150,14 @@ def version():
     """
     Get version information
     """
-    _success("datadog-monitor-downtime v{}".format(VERSION))
+    print("datadog-monitor-downtime v{}".format(VERSION))
 
 
 @managercli.command(short_help="Schedule a downtime")
-@click.option("-md-name", required=True, help="Name of the new Monitor Downtime (must be unique)")
+@click.option("-md-name", required=True, help="Name of the new downtime (must be unique)")
 @click.option("-scope", required=True, help="Comma-separated list of scopes to which the downtime applies")
 @click.option("-monitor-tags", help="Comma-separated list of monitor tags")
-@click.option("-monitor-id", help="Single monitor to which downtime applies")
+@click.option("-monitor-id", help="Single monitor to which the downtime applies")
 @click.option("-start", help="POSIX timestamp to start the downtime at")
 @click.option("-end", help="POSIX timestamp to end the downtime at")
 @click.option("-message", help="Message to include with notifications for this downtime")
@@ -187,22 +184,24 @@ def schedule(ctx, md_name, scope, monitor_tags, monitor_id, start, end,
         _abort("Downtime {} already exists in state".format(md_name), status=12)
 
     recur_obj = None
+
+    # Create recurrence object only if its mandatory values are provided
     if recur_type and recur_period:
         recur_obj = {
             "type": recur_type,
-            "period": recur_period,
+            "period": int(recur_period),
             "until_occurrences": recur_until_occurrences,
-            "until_date": recur_until_date,
-            "week_days": recur_weekdays
+            "until_date": int(recur_until_date),
+            "week_days": int(recur_weekdays)
         }
 
     try:
         res = datadog.api.Downtime.create(
             scope=scope,
             monitor_tags=monitor_tags,
-            monitor_id=monitor_id,
-            start=start,
-            end=end,
+            monitor_id=int(monitor_id),
+            start=int(start),
+            end=int(end),
             message=message,
             timezone=timezone,
             recurrence=recur_obj
