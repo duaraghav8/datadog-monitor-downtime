@@ -44,6 +44,17 @@ def __init_datadog(api_key, app_key):
 
 
 def _acquire_state_lock(target_dir):
+    """
+    Acquire write lock by creating a lock file in the same directory
+    as the state.
+
+    If a lock file already exists, this method waits indefinitely until
+    it is able to acquire the lock. No timeout exists to maximize the
+    likelihood of modifying the local state.
+
+    :param target_dir: Directory where the state file resides
+    :return: None
+    """
     state_lock_file = os.path.join(target_dir, STATE_LOCK_FILENAME)
 
     # Wait for the other process to release state lock
@@ -57,6 +68,17 @@ def _acquire_state_lock(target_dir):
 
 
 def _release_state_lock(target_dir):
+    """
+    Release the write lock acquired to modify local state.
+
+    If this method fails to delete the lock file, the process aborts
+    immediately and the file must be deleted manually, otherwise all
+    other instances of this script will be stuck indefinitely, waiting
+    for the lock to be released.
+
+    :param target_dir: Directory where the state file resides
+    :return: None
+    """
     state_lock_file = os.path.join(target_dir, STATE_LOCK_FILENAME)
     try:
         os.remove(os.path.join(state_lock_file))
@@ -65,6 +87,12 @@ def _release_state_lock(target_dir):
 
 
 def _read_state(file):
+    """
+    Read local state
+
+    :param file: State file path
+    :return: State object as python dict (Key: downtime name, Value: downtime datadog ID)
+    """
     if not os.path.exists(file):
         _abort("File {} does not exist".format(file), status=3)
 
@@ -76,10 +104,25 @@ def _read_state(file):
 
 
 def _write_state(file, action, key, value):
-    # acquire state lock, read state, modify in memory, write back, release lock
+    """
+    Modify local state to record the action taken in this process.
+    The state is written to only if a new downtime is created or an
+    existing one deleted.
+    This method must release the acquired lock regardless of whether
+    it fails or succeeds in performing the action.
+
+    :param file: State file path
+    :param action: The action to perform on a resource in the state (create or delete)
+    :param key: Resource name
+    :param value: Resource value (used when creating a new resource)
+    :return: None
+    """
     state_dir = os.path.dirname(file)
 
+    # Do not proceed until write lock has been acquired
     _acquire_state_lock(state_dir)
+    # Reading the state now guarantees that it can't be modified by
+    # other instances of this script until this function releases the write lock.
     state = _read_state(file)
 
     if action == "delete" and key in state:
