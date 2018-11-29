@@ -83,7 +83,8 @@ def _release_state_lock(target_dir):
     try:
         os.remove(os.path.join(state_lock_file))
     except Exception as e:
-        _abort("Failed to delete state lock {}: {}".format(state_lock_file, str(e)), status=10)
+        _abort("Failed to release state lock "
+               "{}: {}\nLock file must be manually removed".format(state_lock_file, str(e)), status=10)
 
 
 def _read_state(file):
@@ -216,7 +217,7 @@ def schedule(ctx, md_name, scope, monitor_tags, monitor_id, start, end,
     """
     Schedule a downtime
 
-    Doc:
+    Doc: https://github.com/duaraghav8/datadog-monitor-downtime#scheduling-a-downtime
 
     API reference: https://docs.datadoghq.com/api/?lang=python#schedule-monitor-downtime
     """
@@ -270,7 +271,7 @@ def cancel(ctx, md_name):
     """
     Cancel a downtime managed by this application
 
-    Doc:
+    Doc: https://github.com/duaraghav8/datadog-monitor-downtime#cancelling-a-downtime
 
     API reference: https://docs.datadoghq.com/api/?lang=python#cancel-monitor-downtime
     """
