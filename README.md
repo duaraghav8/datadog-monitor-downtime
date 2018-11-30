@@ -3,6 +3,12 @@ This is a commandline utility that helps schedule and cancel [monitor downtimes]
 
 For example, a deployment job in a CI server like Jenkins could invoke this tool to setup a monitor downtime before killing a Tomcat process that is being monitored for health. Once the deployment is successful and tomcat has restarted, the tool can be invoked again to delete the downtime and resume Tomcat's monitoring.
 
+## Installation
+This is a stand-alone script and can be placed and run from anywhere on disk. The following Python dependencies must be installed on the system before running the script:
+
+- [datadogpy](https://github.com/DataDog/datadogpy) >= 0.24.0
+- [click](https://click.palletsprojects.com/en/7.x/) >= 7.0
+
 ## Usage
 Any downtimes managed by this script are tracked in its **local state** - a JSON file kept on disk. State initialization must be performed before using this script to manage downtimes. Multiple instances of this script can run simultaneously and operate on a shared state.
 
@@ -94,4 +100,4 @@ python dd-monitor-downtime.py cancel -md-name "video-stream"
 The above example deletes the downtime from Datadog as well as from local state and frees the name `video-stream` for re-use.
 
 ## Notes
-This script internally uses [datadogpy](https://github.com/DataDog/datadogpy) to communicate with Datadog. This library produces a log `No agent or invalid configuration file found` if the script is run on a machine that doesn't have Datadog agent installed. This log can be safely ignored if the intention is to run the tool from such a machine. The tool itself doesn't require datadog agent to be present on the machine.
+This script internally uses [datadogpy](https://github.com/DataDog/datadogpy) to communicate with Datadog. This library produces a log `No agent or invalid configuration file found` if the script is run on a machine that doesn't have Datadog agent installed. This log can be safely ignored if the intention is to run the tool from such a machine. The tool itself doesn't require datadog agent to be present on the host.

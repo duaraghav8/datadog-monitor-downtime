@@ -104,7 +104,7 @@ def _read_state(file):
             _abort(str(ve), status=4)
 
 
-def _write_state(file, action, key, value):
+def _write_state(file, action, key, value=None):
     """
     Modify local state to record the action taken in this process.
     The state is written to only if a new downtime is created or an
@@ -120,8 +120,10 @@ def _write_state(file, action, key, value):
     """
     state_dir = os.path.dirname(file)
 
-    # Do not proceed until write lock has been acquired
+    logging.info("Waiting to acquire state lock")
     _acquire_state_lock(state_dir)
+    logging.info("State lock acquired")
+
     # Reading the state now guarantees that it can't be modified by
     # other instances of this script until this function releases the write lock.
     state = _read_state(file)
@@ -143,6 +145,7 @@ def _write_state(file, action, key, value):
             _abort("Failed to write to state file: {}".format(str(e)), status=9)
 
     _release_state_lock(state_dir)
+    logging.info("State lock released")
 
 
 @click.group(context_settings=CONTEXT_SETTINGS)
@@ -186,7 +189,7 @@ def init(statefile):
     except Exception as e:
         _abort("Failed to initialize state at {}: {}".format(statefile, str(e)), status=14)
 
-    _success("Created {}".format(statefile))
+    print("Created {}".format(statefile))
 
 
 @managercli.command(short_help="Get version")
@@ -231,21 +234,22 @@ def schedule(ctx, md_name, scope, monitor_tags, monitor_id, start, end,
 
     # Create recurrence object only if its mandatory values are provided
     if recur_type and recur_period:
-        recur_obj = {
-            "type": recur_type,
-            "period": int(recur_period),
-            "until_occurrences": recur_until_occurrences,
-            "until_date": int(recur_until_date),
-            "week_days": int(recur_weekdays)
-        }
+        recur_obj = {"type": recur_type, "period": recur_period}
+
+        if recur_until_occurrences:
+            recur_obj["until_occurrences"] = recur_until_occurrences
+        if recur_until_date:
+            recur_obj["until_date"] = recur_until_date
+        if recur_weekdays:
+            recur_obj["week_days"] = recur_weekdays
 
     try:
         res = datadog.api.Downtime.create(
             scope=scope,
             monitor_tags=monitor_tags,
-            monitor_id=int(monitor_id),
-            start=int(start),
-            end=int(end),
+            monitor_id=monitor_id,
+            start=start,
+            end=end,
             message=message,
             timezone=timezone,
             recurrence=recur_obj
@@ -257,7 +261,7 @@ def schedule(ctx, md_name, scope, monitor_tags, monitor_id, start, end,
         _write_state(file=ctx.obj["statefile"], action="create", key=md_name, value=res["id"])
     except Exception as e:
         _abort(
-            "Successfully scheduler downtime {} (ID {}) but failed to update local state: {}".format(md_name, res["id"], str(e)),
+            "Successfully scheduled downtime {} (ID {}) but failed to update local state: {}".format(md_name, res["id"], str(e)),
             status=14
         )
 
@@ -295,7 +299,7 @@ def cancel(ctx, md_name):
             status=7
         )
 
-    _success("Cancelled Monitor downtime {} (ID {}) successfully".format(md_name, md_id))
+    _success("Cancelled downtime {} (ID {}) successfully".format(md_name, md_id))
 
 
 if __name__ == "__main__":
