@@ -4,7 +4,7 @@ This is a commandline utility that helps schedule and cancel [monitor downtimes]
 For example, a deployment job in a CI server like Jenkins could invoke this tool to setup a monitor downtime before killing a Tomcat process that is being monitored for health. Once the deployment is successful and tomcat has restarted, the tool can be invoked again to delete the downtime and resume Tomcat's monitoring.
 
 ## Installation
-This is a stand-alone script and can be placed and run from anywhere on disk. The following Python dependencies must be installed on the system before running the script:
+This is a stand-alone script and can be placed and run from anywhere on disk. The recommended way to run it is inside a container. The following Python dependencies must be installed on the system before running the script:
 
 - [datadogpy](https://github.com/DataDog/datadogpy) >= 0.24.0
 - [click](https://click.palletsprojects.com/en/7.x/) >= 7.0
@@ -86,7 +86,9 @@ python dd-monitor-downtime.py schedule -md-name "java-apps" -scope "env:stage" -
 python dd-monitor-downtime.py schedule -md-name "everything" -scope "env:prod" -recur-type days -recur-period 3 -recur-weekdays "Mon,Fri"
 ```
 
-Note that if the `end` option is supplied, the downtime will delete itself from Datadog at the specified time. Despite this, the `cancel` command must be run with this downtime's name so that the script also removes it from local state and frees the name for re-use.
+Note that if the `-end` option is supplied, the downtime will delete itself from Datadog at the specified time. Despite this, the `cancel` command must be run with this downtime's name so that the script also removes it from local state and frees the name for re-use.
+
+Supplying a value for `-end` is highly recommended. This ensures that if the script is unable to delete a scheduled downtime, the downtime will delete itself at some point in future and won't permanently hide the target alerts.
 
 See Scheduling a downtime on [Datadog docs](https://docs.datadoghq.com/monitors/downtimes/) and its [API reference](https://docs.datadoghq.com/api/?lang=python#schedule-monitor-downtime) for detailed descriptions of all the options.
 
