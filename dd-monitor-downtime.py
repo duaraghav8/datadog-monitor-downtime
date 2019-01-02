@@ -16,7 +16,7 @@ ENV_DD_APP_KEY = "DATADOG_APP_KEY"
 STATE_LOCK_FILENAME = ".ddmd.lock"
 
 logging.basicConfig(level=logging.INFO,
-                    datefmt="%Y-%m-%d %H:%M:%S%z", format='%(asctime)s [%(levelname)s]  %(message)s')
+                    datefmt="%Y-%m-%d %H:%M:%S%z", format="%(asctime)s [%(levelname)s]  %(message)s")
 
 
 def _abort(message, status=1):
